@@ -1,0 +1,328 @@
+generator scylla {
+  provider = "scylla-odm"
+}
+
+datasource db {
+  provider = "scylladb"
+  host     = "localhost"
+  port     = 9042
+  keyspace = "live_delivery_app"
+}
+
+//////////////////////////
+// 👤 USER DOMAIN
+//////////////////////////
+
+model User {
+  id          uuid
+  created_at  timestamp
+  name        text
+  email       text
+  phone       text
+  role        text
+  password text
+  is_premium  boolean
+  @@partitionKey([id])
+  @@clusteringKey([created_at])
+}
+
+model UserAddress {
+  user_id      uuid
+  id           uuid
+  label        text
+  lat          float
+  lng          float
+  address_text text
+  is_default   boolean
+
+  @@partitionKey([user_id])
+  @@clusteringKey([id])
+}
+
+model UserSubscription {
+  user_id         uuid
+  start_date      timestamp
+  plan_id         uuid
+  end_date        timestamp
+  savings_to_date float
+  is_auto_renew   boolean
+
+  @@partitionKey([user_id])
+  @@clusteringKey([start_date])
+}
+
+model LoyaltyCoins {
+  user_id        uuid
+  transaction_at timestamp
+  points         int
+  reason         text
+
+  @@partitionKey([user_id])
+  @@clusteringKey([transaction_at])
+}
+
+//////////////////////////
+// 🏪 STORE
+//////////////////////////
+
+model Store {
+  id       uuid
+  created_at timestamp
+  name     text
+  type     text
+  location text
+  lat      float
+  lng      float
+  rating   float
+  is_open  boolean
+  tags     list<text>
+
+  @@partitionKey([id])
+}
+
+//////////////////////////
+// 🛍️ PRODUCTS
+//////////////////////////
+
+model Product {
+  id           uuid
+  store_id     uuid
+  created_at   timestamp
+  name         text
+  price        float
+  category     text
+  is_available boolean
+  is_veg       boolean
+  stock        int
+  add_ons      map<text, float>
+
+  @@partitionKey([id])
+}
+
+//////////////////////////
+// 🛒 CART
+//////////////////////////
+
+model Cart {
+  user_id    uuid
+  created_at timestamp
+  product_id uuid
+  quantity   int
+  added_at   timestamp
+
+  @@partitionKey([user_id])
+  @@clusteringKey([product_id])
+}
+
+//////////////////////////
+// 📦 ORDER
+//////////////////////////
+
+model Orders {
+  id               uuid
+  created_at       timestamp
+  user_id          uuid
+  store_id         uuid
+  rider_id         uuid
+  status           text
+  total_price      float
+  delivery_fee     float
+  surge_fee        float
+  discount_amount  float
+  tax_amount       float
+  final_amount     float
+  payment_status   text
+  payment_id       uuid
+  otp              int
+  address_snapshot text
+
+  @@partitionKey([id])
+  @@clusteringKey([created_at])
+}
+
+model OrderItem {
+  order_id   uuid
+  product_id uuid
+  quantity   int
+  price      float
+
+  @@partitionKey([order_id])
+  @@clusteringKey([product_id])
+}
+
+model OrderByUser {
+  user_id      uuid
+  created_at   timestamp
+  order_id     uuid
+  status       text
+  store_name   text
+  total_amount float
+
+  @@partitionKey([user_id])
+  @@clusteringKey([created_at])
+}
+
+//////////////////////////
+// 💳 PAYMENT
+//////////////////////////
+
+model Payment {
+  id              uuid
+  paid_at         timestamp
+  order_id        uuid
+  user_id         uuid
+  amount          float
+  method          text
+  status          text
+  transaction_ref text
+
+  @@partitionKey([id])
+  @@clusteringKey([paid_at])
+}
+
+model Refund {
+  id         uuid
+  created_at timestamp
+  payment_id uuid
+  order_id   uuid
+  amount     float
+  reason     text
+  status     text
+
+  @@partitionKey([id])
+  @@clusteringKey([created_at])
+}
+
+//////////////////////////
+// 🚴 RIDER
+//////////////////////////
+
+model RiderProfile {
+  rider_id       uuid
+  vehicle_type   text
+  rating         float
+  total_orders   int
+  current_status text
+  created_at     timestamp
+
+  @@partitionKey([rider_id])
+}
+
+model RiderIncentive {
+  rider_id        uuid
+  date            date
+  daily_earnings  float
+  trips_completed int
+  incentive_bonus float
+
+  @@partitionKey([rider_id])
+  @@clusteringKey([date])
+}
+
+//////////////////////////
+// 📍 TRACKING
+//////////////////////////
+
+model LiveTracking {
+  order_id      uuid
+  timestamp     timestamp
+  lat           float
+  lng           float
+  bearing       float
+  battery_level int
+  ttl           int
+
+  @@partitionKey([order_id])
+  @@clusteringKey([timestamp])
+}
+
+model OrderETA {
+  order_id       uuid
+  last_updated   timestamp
+  current_eta    int
+  traffic_level  text
+  weather_impact text
+
+  @@partitionKey([order_id])
+  @@clusteringKey([last_updated])
+}
+
+//////////////////////////
+// 💬 CHAT
+//////////////////////////
+
+model ChatMessage {
+  order_id   uuid
+  timestamp  timestamp
+  sender_id  uuid
+  message    text
+  msg_type   text
+  is_read    boolean
+
+  @@partitionKey([order_id])
+  @@clusteringKey([timestamp])
+}
+
+model QuickActionLog {
+  order_id   uuid
+  timestamp  timestamp
+  action_type text
+
+  @@partitionKey([order_id])
+  @@clusteringKey([timestamp])
+}
+
+//////////////////////////
+// 📈 PRICING
+//////////////////////////
+
+model SurgePricing {
+  zone_id    text
+  timestamp  timestamp
+  multiplier float
+  reason     text
+
+  @@partitionKey([zone_id])
+  @@clusteringKey([timestamp])
+}
+
+//////////////////////////
+// 🏬 INVENTORY
+//////////////////////////
+
+model Inventory {
+  store_id     uuid
+  product_id   uuid
+  stock_count  int
+  aisle_number text
+
+  @@partitionKey([store_id])
+  @@clusteringKey([product_id])
+}
+
+//////////////////////////
+// ⭐ FEEDBACK
+//////////////////////////
+
+model Review {
+  id        uuid
+  order_id  uuid
+  user_id   uuid
+  store_id  uuid
+  rating    int
+  comment   text
+  tags      list<text>
+
+  @@partitionKey([id])
+}
+
+model Dispute {
+  id            uuid
+  order_id      uuid
+  user_id       uuid
+  issue_type    text
+  status        text
+  refund_amount float
+
+  @@partitionKey([id])
+}

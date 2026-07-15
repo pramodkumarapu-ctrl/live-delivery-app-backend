@@ -1,0 +1,2 @@
+-- Migration: rename_order_to_orders
+-- Write your CQL here
