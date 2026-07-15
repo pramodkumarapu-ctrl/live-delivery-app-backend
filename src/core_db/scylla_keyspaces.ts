@@ -9,7 +9,7 @@ interface KeyspaceOptions {
 }
 
 /**
- * Ensures keyspace exists (Production Safe)
+
  */
 export async function ensureKeyspace(
   client: Client,
